@@ -14,6 +14,8 @@ use Waavi\Translation\Models\Translation;
 use Waavi\Translation\Repositories\LanguageRepository;
 use Waavi\Translation\Repositories\TranslationRepository;
 use Waavi\Translation\Routes\ResourceRegistrar;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 
 class TranslationServiceProvider extends LaravelTranslationServiceProvider
 {
@@ -52,7 +54,7 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
     /**
      *  IOC alias provided by this Service Provider.
      *
-     *  @return array
+     * @return array
      */
     public function provides()
     {
@@ -68,28 +70,29 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
     {
         $app = $this->app;
         $this->app->singleton('translation.loader', function ($app) {
-            $source        = $app['config']->get('translator.source');
+            $source = $app['config']->get('translator.source');
             $defaultLocale = $app['config']->get('app.locale');
-            $loader        = null;
+            $loader = null;
             switch ($source) {
                 case 'mixed':
                     $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
-                    $fileLoader        = new FileLoader($defaultLocale, $laravelFileLoader);
-                    $databaseLoader    = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
-                    $loader            = new MixedLoader($defaultLocale, $fileLoader, $databaseLoader);
+                    $fileLoader = new FileLoader($defaultLocale, $laravelFileLoader);
+                    $databaseLoader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
+                    $loader = new MixedLoader($defaultLocale, $fileLoader, $databaseLoader);
                     break;
                 case 'mixed_db':
                     $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
-                    $fileLoader        = new FileLoader($defaultLocale, $laravelFileLoader);
-                    $databaseLoader    = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
-                    $loader            = new MixedLoader($defaultLocale, $databaseLoader, $fileLoader);
+                    $fileLoader = new FileLoader($defaultLocale, $laravelFileLoader);
+                    $databaseLoader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
+                    $loader = new MixedLoader($defaultLocale, $databaseLoader, $fileLoader);
                     break;
                 case 'database':
                     $loader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
                     break;
-                default:case 'files':
+                default:
+                case 'files':
                     $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
-                    $loader            = new FileLoader($defaultLocale, $laravelFileLoader);
+                    $loader = new FileLoader($defaultLocale, $laravelFileLoader);
                     break;
             }
             if ($app['config']->get('translator.cache.enabled')) {
@@ -104,7 +107,7 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
     /**
      *  Register the translation cache repository
      *
-     *  @return void
+     * @return void
      */
     public function registerCacheRepository()
     {
@@ -121,12 +124,12 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
      */
     protected function registerFileLoader()
     {
-        $app                   = $this->app;
-        $defaultLocale         = $app['config']->get('app.locale');
-        $languageRepository    = $app->make(LanguageRepository::class);
+        $app = $this->app;
+        $defaultLocale = $app['config']->get('app.locale');
+        $languageRepository = $app->make(LanguageRepository::class);
         $translationRepository = $app->make(TranslationRepository::class);
-        $translationsPath      = $app->basePath() . '/resources/lang';
-        $command               = new FileLoaderCommand($languageRepository, $translationRepository, $app['files'], $translationsPath, $defaultLocale);
+        $translationsPath = $app->basePath() . '/resources/lang';
+        $command = new FileLoaderCommand($languageRepository, $translationRepository, $app['files'], $translationsPath, $defaultLocale);
 
         $this->app['command.translator:load'] = $command;
         $this->commands('command.translator:load');
@@ -135,7 +138,7 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
     /**
      *  Flushes the translation cache
      *
-     *  @return void
+     * @return void
      */
     public function registerCacheFlusher()
     {
@@ -145,5 +148,47 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
 
         $this->app['command.translator:flush'] = $command;
         $this->commands('command.translator:flush');
+    }
+
+
+    /**
+     * Dirty fix laravel 5.4
+     */
+    public function loadScheema()
+    {
+        if (!Schema::hasTable('translator_languages')) {
+            $this->createLanguageScheema();
+        }
+
+        if (!Schema::hasTable('translator_languages')) {
+            $this->createLanguageScheema();
+        }
+    }
+
+
+    private function createLanguageScheema()
+    {
+        Schema::create('translator_languages', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('locale', 10)->unique();
+            $table->string('name', 60)->unique();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('translator_translations', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('locale', 10);
+            $table->string('namespace', 150)->default('*');
+            $table->string('group', 150);
+            $table->string('item', 150);
+            $table->text('text');
+            $table->boolean('unstable')->default(false);
+            $table->boolean('locked')->default(false);
+            $table->timestamps();
+            $table->foreign('locale')->references('locale')->on('translator_languages');
+            $table->unique(['locale', 'namespace', 'group', 'item']);
+        });
+
     }
 }
