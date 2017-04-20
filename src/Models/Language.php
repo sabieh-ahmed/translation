@@ -1,10 +1,17 @@
 <?php namespace Waavi\Translation\Models;
-
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Eloquent\Model;
 
 class Language extends Model
 {
     use \Illuminate\Database\Eloquent\SoftDeletes;
+
+    public function __construct(){
+        if(!Schema::hasTable('translator_languages')){
+            $this->createSchema();
+        }
+    }
 
     /**
      *  Table name in the database.
@@ -34,6 +41,17 @@ class Language extends Model
     public function getLanguageCodeAttribute()
     {
         return "languages.{$this->locale}";
+    }
+
+    private function createSchema()
+    {
+        Schema::create('translator_languages', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('locale', 10)->unique();
+            $table->string('name', 60)->unique();
+            $table->timestamps();
+            $table->softDeletes();
+        });
     }
 
 }
