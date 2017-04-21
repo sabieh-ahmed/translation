@@ -154,6 +154,7 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
     }
 
 
+
     /**
      * Dirty fix laravel 5.4
      */
@@ -163,12 +164,15 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
             $this->createLanguageScheema();
         }
 
-        if (!Schema::hasTable('translator_languages')) {
-            $this->createLanguageScheema();
+        if (!Schema::hasTable('translator_translations')) {
+            $this->createTranslatorScheema();
         }
     }
 
 
+    /**
+     * Creates language table if doesn't exist.
+     */
     private function createLanguageScheema()
     {
         Schema::create('translator_languages', function (Blueprint $table) {
@@ -178,7 +182,13 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
             $table->timestamps();
             $table->softDeletes();
         });
+    }
 
+    /**
+     * Creates translation table if it doesn't exist
+     */
+    private function createTranslatorScheema()
+    {
         Schema::create('translator_translations', function (Blueprint $table) {
             $table->increments('id');
             $table->string('locale', 10);
@@ -192,6 +202,5 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
             $table->foreign('locale')->references('locale')->on('translator_languages');
             $table->unique(['locale', 'namespace', 'group', 'item']);
         });
-
     }
 }
