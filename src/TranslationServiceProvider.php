@@ -29,7 +29,8 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
         $this->publishes([
             __DIR__ . '/../config/translator.php' => config_path('translator.php'),
         ]);
-      //  $this->loadMigrationsFrom(__DIR__ . '/../database/migrations/');
+        $this->loadScheema();
+        //  $this->loadMigrationsFrom(__DIR__ . '/../database/migrations/');
     }
 
     /**
@@ -73,32 +74,35 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
             $source = $app['config']->get('translator.source');
             $defaultLocale = $app['config']->get('app.locale');
             $loader = null;
-            switch ($source) {
-                case 'mixed':
-                    $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
-                    $fileLoader = new FileLoader($defaultLocale, $laravelFileLoader);
-                    $databaseLoader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
-                    $loader = new MixedLoader($defaultLocale, $fileLoader, $databaseLoader);
-                    break;
-                case 'mixed_db':
-                    $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
-                    $fileLoader = new FileLoader($defaultLocale, $laravelFileLoader);
-                    $databaseLoader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
-                    $loader = new MixedLoader($defaultLocale, $databaseLoader, $fileLoader);
-                    break;
-                case 'database':
-                    $loader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
-                    break;
-                default:
-                case 'files':
-                    $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
-                    $loader = new FileLoader($defaultLocale, $laravelFileLoader);
-                    break;
-            }
-            if ($app['config']->get('translator.cache.enabled')) {
-                //$cacheStore      = $app['cache']->getStore();
-                //$cacheRepository = CacheRepositoryFactory::make($cacheStore, $app['config']->get('translator.cache.suffix'));
-                $loader = new CacheLoader($defaultLocale, $app['translation.cache.repository'], $loader, $app['config']->get('translator.cache.timeout'));
+            try {
+                switch ($source) {
+                    case 'mixed':
+                        $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
+                        $fileLoader = new FileLoader($defaultLocale, $laravelFileLoader);
+                        $databaseLoader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
+                        $loader = new MixedLoader($defaultLocale, $fileLoader, $databaseLoader);
+                        break;
+                    case 'mixed_db':
+                        $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
+                        $fileLoader = new FileLoader($defaultLocale, $laravelFileLoader);
+                        $databaseLoader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
+                        $loader = new MixedLoader($defaultLocale, $databaseLoader, $fileLoader);
+                        break;
+                    case 'database':
+                        $loader = new DatabaseLoader($defaultLocale, $app->make(TranslationRepository::class));
+                        break;
+                    default:
+                    case 'files':
+                        $laravelFileLoader = new LaravelFileLoader($app['files'], $app->basePath() . '/resources/lang');
+                        $loader = new FileLoader($defaultLocale, $laravelFileLoader);
+                        break;
+                }
+                if ($app['config']->get('translator.cache.enabled')) {
+                    //$cacheStore      = $app['cache']->getStore();
+                    //$cacheRepository = CacheRepositoryFactory::make($cacheStore, $app['config']->get('translator.cache.suffix'));
+                    $loader = new CacheLoader($defaultLocale, $app['translation.cache.repository'], $loader, $app['config']->get('translator.cache.timeout'));
+                }
+            } catch (\Exception $e) {
             }
             return $loader;
         });
@@ -149,7 +153,6 @@ class TranslationServiceProvider extends LaravelTranslationServiceProvider
         $this->app['command.translator:flush'] = $command;
         $this->commands('command.translator:flush');
     }
-
 
 
     /**
